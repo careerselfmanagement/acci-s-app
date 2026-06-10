@@ -176,26 +176,21 @@ def render_likert_ruler():
     )
 
 
-def render_check_row(question_key: str):
-    cols = st.columns(5, gap="small")
-    selected_values = []
+def render_radio_row(question_key: str):
+    st.markdown("<div class='radio-aligner'>", unsafe_allow_html=True)
 
-    for col, value in zip(cols, [1, 2, 3, 4, 5]):
-        with col:
-            checked = st.checkbox(
-                " ",
-                key=f"{question_key}_{value}",
-                label_visibility="collapsed",
-            )
-            if checked:
-                selected_values.append(value)
+    value = st.radio(
+        label=f"{question_key}_回答",
+        options=[1, 2, 3, 4, 5],
+        format_func=lambda x: "",
+        horizontal=True,
+        index=None,
+        key=question_key,
+        label_visibility="collapsed",
+    )
 
-    if len(selected_values) == 1:
-        return selected_values[0]
-    elif len(selected_values) == 0:
-        return None
-    else:
-        return "multiple"
+    st.markdown("</div>", unsafe_allow_html=True)
+    return value
 
 
 st.set_page_config(page_title=APP_TITLE, page_icon="🧭", layout="centered")
@@ -208,8 +203,8 @@ st.markdown(
 }
 
 .likert-box {
-  width: 100%;
-  max-width: 780px;
+  width: 760px;
+  max-width: 100%;
   margin-top: 8px;
   margin-bottom: 0px;
 }
@@ -283,44 +278,39 @@ st.markdown(
   font-weight: 500;
 }
 
-div[data-testid="stCheckbox"] {
-  display: flex;
-  justify-content: center;
+/* ここが今回の肝。ラジオボタンの幅を定規と同じ760pxに固定 */
+.radio-aligner + div[data-testid="stRadio"] {
+  width: 760px !important;
+  max-width: 100% !important;
 }
 
-div[data-testid="stCheckbox"] label {
+.radio-aligner + div[data-testid="stRadio"] div[role="radiogroup"] {
+  display: grid !important;
+  grid-template-columns: repeat(5, 1fr) !important;
+  width: 760px !important;
+  max-width: 100% !important;
+  column-gap: 0 !important;
+  margin-top: -4px !important;
+  margin-bottom: 32px !important;
+}
+
+.radio-aligner + div[data-testid="stRadio"] div[role="radiogroup"] label {
+  width: 100% !important;
+  min-width: 0 !important;
   display: flex !important;
   justify-content: center !important;
   align-items: center !important;
-  width: 100% !important;
   padding: 0 !important;
   margin: 0 !important;
 }
 
-div[data-testid="stCheckbox"] label > div:first-child {
+.radio-aligner + div[data-testid="stRadio"] div[role="radiogroup"] label > div:first-child {
   margin-right: 0 !important;
 }
 
-div[data-testid="column"] {
-  display: flex;
-  justify-content: center;
-}
-
-div[data-testid="stCheckbox"] p {
+.radio-aligner + div[data-testid="stRadio"] div[role="radiogroup"] p {
   display: none !important;
 }
-
-.stCheckbox {
-  display: flex;
-  justify-content: center;
-}
-
-section.main div[data-testid="stHorizontalBlock"] {
-  max-width: 780px;
-  margin-top: -4px;
-  margin-bottom: 30px;
-}
-
 </style>
 """,
     unsafe_allow_html=True,
@@ -372,7 +362,6 @@ if "question_order" not in st.session_state:
     st.session_state.question_order = order
 
 answers = {}
-multiple_error_questions = []
 
 q_no = 1
 for idx in st.session_state.question_order:
@@ -385,13 +374,8 @@ for idx in st.session_state.question_order:
     )
 
     render_likert_ruler()
-    value = render_check_row(key)
-
-    if value == "multiple":
-        multiple_error_questions.append(q_no)
-        answers[key] = None
-    else:
-        answers[key] = value
+    value = render_radio_row(key)
+    answers[key] = value
 
     q_no += 1
 
@@ -401,11 +385,7 @@ if submitted:
     missing_face = gender is None or age is None or org_count is None
     missing_main = any(v is None for v in answers.values())
 
-    if multiple_error_questions:
-        qs = "、".join([f"Q{x}" for x in multiple_error_questions])
-        st.error(f"{qs}で複数の選択肢が選ばれています。各項目につき1つだけ選択してください。")
-
-    elif missing_face or missing_main:
+    if missing_face or missing_main:
         st.error("未回答の項目があります。すべて回答してください。")
 
     else:
