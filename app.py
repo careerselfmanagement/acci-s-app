@@ -7,7 +7,7 @@ from zoneinfo import ZoneInfo
 
 import streamlit as st
 
-APP_TITLE = "キャリアのステージはどこだ？"
+APP_TITLE = "キャリアステージ確認"
 OUTPUT_CSV = Path("responses.csv")
 
 STAGES = {
@@ -66,6 +66,7 @@ def stage_scores(answers: dict[str, int]) -> dict[str, float]:
 
 def judge(answers: dict[str, int]):
     values = list(answers.values())
+
     if len(set(values)) == 1:
         return "判定不能", [], {}
 
@@ -77,6 +78,7 @@ def judge(answers: dict[str, int]):
 
 def append_local_csv(row: dict):
     file_exists = OUTPUT_CSV.exists()
+
     with OUTPUT_CSV.open("a", newline="", encoding="utf-8-sig") as f:
         writer = csv.DictWriter(f, fieldnames=list(row.keys()))
         if not file_exists:
@@ -143,11 +145,11 @@ def render_scale(question_key: str):
         """
 <div class="scale-wrap">
   <div class="scale-top-row">
-    <div class="scale-label-left">まったく<br>関心がない</div>
+    <div class="scale-label">まったく<br>関心がない</div>
     <div></div>
     <div></div>
     <div></div>
-    <div class="scale-label-right">大いに<br>関心がある</div>
+    <div class="scale-label">大いに<br>関心がある</div>
   </div>
 
   <div class="scale-number-row">
@@ -187,14 +189,12 @@ st.markdown(
     max-width: 900px;
 }
 
-/* 質問文 */
 .question-text {
-    margin-top: 32px;
+    margin-top: 34px;
     margin-bottom: 10px;
     font-weight: 500;
 }
 
-/* 尺度全体 */
 .scale-wrap {
     width: 100%;
     max-width: 760px;
@@ -202,7 +202,6 @@ st.markdown(
     margin-bottom: 0px;
 }
 
-/* 1と5の真上にだけラベル */
 .scale-top-row {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
@@ -210,8 +209,7 @@ st.markdown(
     margin-bottom: 4px;
 }
 
-.scale-label-left,
-.scale-label-right {
+.scale-label {
     text-align: center;
     font-size: 0.88rem;
     line-height: 1.25;
@@ -221,7 +219,6 @@ st.markdown(
     align-items: center;
 }
 
-/* 数字と線 */
 .scale-number-row {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
@@ -246,7 +243,6 @@ st.markdown(
     font-size: 1rem;
 }
 
-/* 数字同士の中央に棒を通す */
 .num-cell::after {
     content: "";
     position: absolute;
@@ -256,40 +252,35 @@ st.markdown(
     z-index: 1;
 }
 
-/* 1は右方向だけ */
 .num-first::after {
     left: 50%;
     right: -50%;
 }
 
-/* 2,3,4は左右方向 */
 .num-middle::after {
     left: -50%;
     right: -50%;
 }
 
-/* 5は左方向だけ */
 .num-last::after {
     left: -50%;
     right: 50%;
 }
 
-/* ボタン行を少し上げる */
 div[data-testid="stHorizontalBlock"] {
     max-width: 760px;
 }
 
-/* ボタンをチェック欄風にする */
 div[data-testid="stButton"] {
     display: flex;
     justify-content: center;
 }
 
 div[data-testid="stButton"] button {
-    font-size: 1.25rem;
+    font-size: 1.9rem;
     line-height: 1;
-    padding: 0.2rem 0.4rem;
-    min-height: 2rem;
+    padding: 0.05rem 0.3rem;
+    min-height: 2.5rem;
     border: none;
     background: transparent;
     box-shadow: none;
@@ -303,6 +294,11 @@ div[data-testid="stButton"] button:hover {
 div[data-testid="stButton"] button:focus {
     outline: none;
     box-shadow: none;
+}
+
+div[data-testid="stButton"] button p {
+    font-size: 1.9rem;
+    line-height: 1;
 }
 </style>
 """,
