@@ -18,6 +18,14 @@ LIKERT = [
     (5, "大いに関心がある"),
 ]
 
+LIKERT_LABEL_HTML = {
+    1: "全く関心が<br>ない",
+    2: "あまり関心が<br>ない",
+    3: "少しは関心が<br>ある",
+    4: "ある程度関心が<br>ある",
+    5: "大いに関心が<br>ある",
+}
+
 STAGES = {
     "探索期": {
         "title": "あなたは探索期かも",
@@ -92,13 +100,6 @@ def append_local_csv(row: dict):
 
 
 def append_google_sheet(row: dict) -> bool:
-    """Append row to Google Sheets when Streamlit secrets are configured.
-
-    Required secrets:
-      SPREADSHEET_ID = "..."
-      WORKSHEET_NAME = "Sheet1"  # optional; default Sheet1
-      [gcp_service_account]       # service account JSON block
-    """
     try:
         import gspread
         from google.oauth2.service_account import Credentials
@@ -126,7 +127,6 @@ def append_google_sheet(row: dict) -> bool:
 
 
 def save_response(row: dict):
-    # Google Sheetsが設定されていれば優先。未設定ならローカルCSVへ保存。
     try:
         if append_google_sheet(row):
             return "Google Sheets"
@@ -136,10 +136,8 @@ def save_response(row: dict):
     return "CSV"
 
 
-
-
 def render_likert_ruler():
-    labels_html = "".join(f"<div>{label}</div>" for _, label in LIKERT)
+    labels_html = "".join(f"<div>{LIKERT_LABEL_HTML[value]}</div>" for value, _ in LIKERT)
     ticks_html = "".join("<div class='likert-tick'></div>" for _ in LIKERT)
     numbers_html = "".join(f"<div>{value}</div>" for value, _ in LIKERT)
     st.markdown(
@@ -153,18 +151,19 @@ def render_likert_ruler():
         unsafe_allow_html=True,
     )
 
+
 st.set_page_config(page_title=APP_TITLE, page_icon="🧭", layout="centered")
 st.title(APP_TITLE)
 
 st.markdown(
     """
 <style>
-/* 定規型リカート尺度 */
 .likert-ruler {
   max-width: 760px;
   margin: 8px 0 0 0;
 }
-.likert-labels, .likert-numbers {
+.likert-labels,
+.likert-numbers {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   text-align: center;
@@ -172,9 +171,10 @@ st.markdown(
 }
 .likert-labels div {
   font-size: 0.88rem;
-  line-height: 1.22;
-  min-height: 2.45em;
+  line-height: 1.25;
+  min-height: 2.65em;
   padding: 0 4px;
+  white-space: nowrap;
 }
 .likert-line {
   display: grid;
@@ -204,22 +204,33 @@ st.markdown(
   line-height: 1;
   margin-top: 0;
 }
-/* st.radioは下段のチェック欄として使う */
+div[data-testid="stRadio"] {
+  max-width: 760px !important;
+  width: 100% !important;
+}
 div[data-testid="stRadio"] div[role="radiogroup"] {
-  display: flex;
-  justify-content: space-between;
-  max-width: 760px;
-  margin-top: -8px;
-  margin-bottom: 28px;
+  display: grid !important;
+  grid-template-columns: repeat(5, 1fr) !important;
+  column-gap: 0 !important;
+  max-width: 760px !important;
+  width: 100% !important;
+  margin-top: -6px !important;
+  margin-bottom: 34px !important;
 }
 div[data-testid="stRadio"] div[role="radiogroup"] label {
-  flex: 1 1 0;
-  display: flex;
-  justify-content: center;
-  padding: 0;
+  width: 100% !important;
+  min-width: 0 !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+div[data-testid="stRadio"] div[role="radiogroup"] label > div:first-child {
+  margin-right: 0 !important;
 }
 div[data-testid="stRadio"] div[role="radiogroup"] p {
-  display: none;
+  display: none !important;
 }
 .question-text {
   margin-top: 20px;
@@ -229,6 +240,7 @@ div[data-testid="stRadio"] div[role="radiogroup"] p {
 """,
     unsafe_allow_html=True,
 )
+
 with st.form("career_stage_form"):
     gender = st.selectbox(
         "性別を教えてください",
@@ -237,7 +249,12 @@ with st.form("career_stage_form"):
         index=None,
         placeholder="選択してください",
     )
-    age = st.selectbox("年齢を教えてください", options=list(range(15, 100)), index=None, placeholder="選択してください")
+    age = st.selectbox(
+        "年齢を教えてください",
+        options=list(range(15, 100)),
+        index=None,
+        placeholder="選択してください",
+    )
     org_count = st.selectbox(
         "今の勤務先は何社目（何組織目）ですか？",
         options=list(range(0, 21)),
