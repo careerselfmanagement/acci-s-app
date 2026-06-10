@@ -84,6 +84,7 @@ def judge(answers: dict[str, int]):
     values = list(answers.values())
     if len(set(values)) == 1:
         return "判定不能", [], {}
+
     scores = stage_scores(answers)
     ranked = sorted(scores.items(), key=lambda x: x[1], reverse=True)
     top_stages = [stage for stage, _ in ranked[:2]]
@@ -113,15 +114,18 @@ def append_google_sheet(row: dict) -> bool:
         "https://www.googleapis.com/auth/spreadsheets",
         "https://www.googleapis.com/auth/drive",
     ]
+
     service_account_info = dict(st.secrets["gcp_service_account"])
     creds = Credentials.from_service_account_info(service_account_info, scopes=scopes)
     client = gspread.authorize(creds)
+
     worksheet_name = st.secrets.get("WORKSHEET_NAME", "Sheet1")
     ws = client.open_by_key(st.secrets["SPREADSHEET_ID"]).worksheet(worksheet_name)
 
     existing = ws.get_all_values()
     if not existing:
         ws.append_row(list(row.keys()))
+
     ws.append_row(list(row.values()))
     return True
 
@@ -132,187 +136,288 @@ def save_response(row: dict):
             return "Google Sheets"
     except Exception as e:
         st.warning(f"Google Sheetsへの保存に失敗したため、CSVに保存します: {e}")
+
     append_local_csv(row)
     return "CSV"
 
 
 def render_likert_ruler():
-    labels_html = "".join(f"<div>{LIKERT_LABEL_HTML[value]}</div>" for value, _ in LIKERT)
-    ticks_html = "".join("<div class='likert-tick'></div>" for _ in LIKERT)
-    numbers_html = "".join(f"<div>{value}</div>" for value, _ in LIKERT)
+    labels_html = "".join(
+        f"<div class='likert-label'>{LIKERT_LABEL_HTML[value]}</div>"
+        for value, _ in LIKERT
+    )
+
+    ticks_html = "".join(
+        "<div class='likert-tick-wrap'><div class='likert-tick'></div></div>"
+        for _ in LIKERT
+    )
+
+    numbers_html = "".join(
+        f"<div class='likert-number'>{value}</div>"
+        for value, _ in LIKERT
+    )
+
     st.markdown(
         f"""
-<div class="likert-ruler">
-  <div class="likert-labels">{labels_html}</div>
-  <div class="likert-line">{ticks_html}</div>
-  <div class="likert-numbers">{numbers_html}</div>
+<div class="likert-box">
+  <div class="likert-label-row">
+    {labels_html}
+  </div>
+  <div class="likert-line-row">
+    <div class="likert-horizontal-line"></div>
+    {ticks_html}
+  </div>
+  <div class="likert-number-row">
+    {numbers_html}
+  </div>
 </div>
 """,
         unsafe_allow_html=True,
     )
 
 
+def render_check_row(question_key: str):
+    cols = st.columns(5, gap="small")
+    selected_values = []
+
+    for col, value in zip(cols, [1, 2, 3, 4, 5]):
+        with col:
+            checked = st.checkbox(
+                " ",
+                key=f"{question_key}_{value}",
+                label_visibility="collapsed",
+            )
+            if checked:
+                selected_values.append(value)
+
+    if len(selected_values) == 1:
+        return selected_values[0]
+    elif len(selected_values) == 0:
+        return None
+    else:
+        return "multiple"
+
+
 st.set_page_config(page_title=APP_TITLE, page_icon="🧭", layout="centered")
-st.title(APP_TITLE)
 
 st.markdown(
     """
 <style>
-.likert-ruler {
-  max-width: 760px;
-  margin: 8px 0 0 0;
+.block-container {
+  max-width: 900px;
 }
-.likert-labels,
-.likert-numbers {
+
+.likert-box {
+  width: 100%;
+  max-width: 780px;
+  margin-top: 8px;
+  margin-bottom: 0px;
+}
+
+.likert-label-row {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
+  width: 100%;
+  margin-bottom: 4px;
+}
+
+.likert-label {
   text-align: center;
-  align-items: end;
-}
-.likert-labels div {
-  font-size: 0.88rem;
+  font-size: 0.86rem;
   line-height: 1.25;
-  min-height: 2.65em;
-  padding: 0 4px;
-  white-space: nowrap;
+  min-height: 2.7em;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  white-space: normal;
 }
-.likert-line {
+
+.likert-line-row {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  align-items: center;
-  margin-top: 4px;
-  height: 22px;
+  width: 100%;
+  height: 24px;
   position: relative;
+  align-items: center;
 }
-.likert-line::before {
-  content: "";
+
+.likert-horizontal-line {
   position: absolute;
   left: 10%;
   right: 10%;
-  top: 10px;
+  top: 11px;
   border-top: 2px solid #666;
+  z-index: 0;
 }
-.likert-tick {
-  justify-self: center;
-  width: 0;
-  height: 22px;
-  border-left: 2px solid #666;
+
+.likert-tick-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 24px;
   z-index: 1;
 }
-.likert-numbers div {
-  font-size: 0.94rem;
-  line-height: 1;
-  margin-top: 0;
+
+.likert-tick {
+  height: 24px;
+  border-left: 2px solid #666;
 }
-div[data-testid="stRadio"] {
-  max-width: 760px !important;
-  width: 100% !important;
+
+.likert-number-row {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  width: 100%;
+  margin-top: 0px;
 }
-div[data-testid="stRadio"] div[role="radiogroup"] {
-  display: grid !important;
-  grid-template-columns: repeat(5, 1fr) !important;
-  column-gap: 0 !important;
-  max-width: 760px !important;
-  width: 100% !important;
-  margin-top: -6px !important;
-  margin-bottom: 34px !important;
+
+.likert-number {
+  text-align: center;
+  font-size: 0.95rem;
+  line-height: 1.1;
 }
-div[data-testid="stRadio"] div[role="radiogroup"] label {
-  width: 100% !important;
-  min-width: 0 !important;
+
+.question-text {
+  margin-top: 28px;
+  margin-bottom: 4px;
+  font-weight: 500;
+}
+
+div[data-testid="stCheckbox"] {
+  display: flex;
+  justify-content: center;
+}
+
+div[data-testid="stCheckbox"] label {
   display: flex !important;
   justify-content: center !important;
   align-items: center !important;
+  width: 100% !important;
   padding: 0 !important;
   margin: 0 !important;
 }
-div[data-testid="stRadio"] div[role="radiogroup"] label > div:first-child {
+
+div[data-testid="stCheckbox"] label > div:first-child {
   margin-right: 0 !important;
 }
-div[data-testid="stRadio"] div[role="radiogroup"] p {
+
+div[data-testid="column"] {
+  display: flex;
+  justify-content: center;
+}
+
+div[data-testid="stCheckbox"] p {
   display: none !important;
 }
-.question-text {
-  margin-top: 20px;
-  margin-bottom: 2px;
+
+.stCheckbox {
+  display: flex;
+  justify-content: center;
 }
+
+section.main div[data-testid="stHorizontalBlock"] {
+  max-width: 780px;
+  margin-top: -4px;
+  margin-bottom: 30px;
+}
+
 </style>
 """,
     unsafe_allow_html=True,
 )
 
-with st.form("career_stage_form"):
-    gender = st.selectbox(
-        "性別を教えてください",
-        options=list(GENDER_OPTIONS.keys()),
-        format_func=lambda x: f"{x}={GENDER_OPTIONS[x]}",
-        index=None,
-        placeholder="選択してください",
-    )
-    age = st.selectbox(
-        "年齢を教えてください",
-        options=list(range(15, 100)),
-        index=None,
-        placeholder="選択してください",
-    )
-    org_count = st.selectbox(
-        "今の勤務先は何社目（何組織目）ですか？",
-        options=list(range(0, 21)),
-        index=None,
-        placeholder="選択してください",
-        help="就職経験がない場合は0、最初の就職先に継続勤務中なら1を選択してください。",
-    )
+st.title(APP_TITLE)
 
-    st.markdown("---")
-    st.write("以下12の課題について、あなたが現在どの程度の関心を持っているかを数字で選択してください。")
+gender = st.selectbox(
+    "性別を教えてください",
+    options=list(GENDER_OPTIONS.keys()),
+    format_func=lambda x: f"{x}={GENDER_OPTIONS[x]}",
+    index=None,
+    placeholder="選択してください",
+)
 
-    answers = {}
-    all_items = []
-    for stage, data in STAGES.items():
-        for i, item in enumerate(data["items"]):
-            all_items.append({"stage": stage, "i": i, "item": item})
+age = st.selectbox(
+    "年齢を教えてください",
+    options=list(range(15, 100)),
+    index=None,
+    placeholder="選択してください",
+)
 
-    if "question_order" not in st.session_state:
-        order = list(range(len(all_items)))
-        random.shuffle(order)
-        st.session_state.question_order = order
+org_count = st.selectbox(
+    "今の勤務先は何社目（何組織目）ですか？",
+    options=list(range(0, 21)),
+    index=None,
+    placeholder="選択してください",
+    help="就職経験がない場合は0、最初の就職先に継続勤務中なら1を選択してください。",
+)
 
-    q_no = 1
-    for idx in st.session_state.question_order:
-        q = all_items[idx]
-        key = f"{q['stage']}_{q['i']}"
-        st.markdown(f"<div class='question-text'>Q{q_no}. {q['item']}</div>", unsafe_allow_html=True)
-        render_likert_ruler()
-        ans = st.radio(
-            f"Q{q_no}. {q['item']} 回答",
-            options=[x[0] for x in LIKERT],
-            format_func=lambda x: "",
-            horizontal=True,
-            index=None,
-            key=key,
-            label_visibility="collapsed",
+st.markdown("---")
+st.write("以下12の課題について、あなたが現在どの程度の関心を持っているかを数字で選択してください。")
+
+all_items = []
+for stage, data in STAGES.items():
+    for i, item in enumerate(data["items"]):
+        all_items.append(
+            {
+                "stage": stage,
+                "i": i,
+                "item": item,
+                "key": f"{stage}_{i}",
+            }
         )
-        answers[key] = ans
-        q_no += 1
 
-    submitted = st.form_submit_button("結果を見る")
+if "question_order" not in st.session_state:
+    order = list(range(len(all_items)))
+    random.shuffle(order)
+    st.session_state.question_order = order
+
+answers = {}
+multiple_error_questions = []
+
+q_no = 1
+for idx in st.session_state.question_order:
+    q = all_items[idx]
+    key = q["key"]
+
+    st.markdown(
+        f"<div class='question-text'>Q{q_no}. {q['item']}</div>",
+        unsafe_allow_html=True,
+    )
+
+    render_likert_ruler()
+    value = render_check_row(key)
+
+    if value == "multiple":
+        multiple_error_questions.append(q_no)
+        answers[key] = None
+    else:
+        answers[key] = value
+
+    q_no += 1
+
+submitted = st.button("結果を見る", type="primary")
 
 if submitted:
     missing_face = gender is None or age is None or org_count is None
     missing_main = any(v is None for v in answers.values())
 
-    if missing_face or missing_main:
+    if multiple_error_questions:
+        qs = "、".join([f"Q{x}" for x in multiple_error_questions])
+        st.error(f"{qs}で複数の選択肢が選ばれています。各項目につき1つだけ選択してください。")
+
+    elif missing_face or missing_main:
         st.error("未回答の項目があります。すべて回答してください。")
+
     else:
         status, top_stages, scores = judge(answers)
         now = datetime.now(ZoneInfo("Asia/Tokyo")).strftime("%Y-%m-%d %H:%M:%S")
 
         flat_answers = {}
-        q_no = 1
+        original_q_no = 1
         for stage, data in STAGES.items():
             for i, item in enumerate(data["items"]):
-                flat_answers[f"Q{q_no}"] = answers[f"{stage}_{i}"]
-                q_no += 1
+                flat_answers[f"Q{original_q_no}"] = answers[f"{stage}_{i}"]
+                original_q_no += 1
 
         result_titles = [STAGES[s]["title"] for s in top_stages]
         feedback_texts = [STAGES[s]["feedback"] for s in top_stages]
@@ -331,9 +436,11 @@ if submitted:
             "FB本文": "\n\n".join(feedback_texts),
             "ステージ平均_JSON_管理用": json.dumps(scores, ensure_ascii=False),
         }
+
         saved_to = save_response(row)
 
         st.success("回答を記録しました。")
+
         if status == "判定不能":
             st.warning("判定不能です。すべて同じ点数が選択されているため、結果を表示できません。")
         else:
@@ -341,4 +448,5 @@ if submitted:
             for stage in top_stages:
                 st.markdown(f"### {STAGES[stage]['title']}")
                 st.write(STAGES[stage]["feedback"])
+
         st.caption(f"保存先: {saved_to}")
