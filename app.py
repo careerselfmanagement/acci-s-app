@@ -7,13 +7,12 @@ from zoneinfo import ZoneInfo
 
 import streamlit as st
 
-APP_TITLE = "キャリアステージ"
+APP_TITLE = "キャリアのステージはどこだ？"
 OUTPUT_CSV = Path("responses.csv")
 
 STAGES = {
     "探索期": {
-        "title": "探索期",
-        "image": "tansaku.png",
+        "title": "あなたは探索期かも",
         "items": [
             "自分に最も適した仕事分野を見つけること",
             "自分が興味を持てる仕事分野を見つけること",
@@ -22,8 +21,7 @@ STAGES = {
         "feedback": "探索段階は、一般には15歳から25歳の間が該当する。しかし、より後の時期に再び経験することも、しばしばある。結晶化、特定化、実行化という3つの下位段階があり、結晶化段階では、職業選択の幅を絞り込み、自分がどのような仕事に就きたいのかを考える。特定化段階では、自分が検討している職業の中で、どの職業が最も適しているのかを決定する。実行化段階では、個人がキャリア目標を達成するための計画を立て、雇用主を特定し、面接のプロセスを開始する。",
     },
     "確立期": {
-        "title": "確立期",
-        "image": "kakuritsu.png",
+        "title": "あなたは確立期かも",
         "items": [
             "長く続けられる定職に就くこと",
             "仕事において、際立って高い見識や技能を身につけること",
@@ -32,8 +30,7 @@ STAGES = {
         "feedback": "確立段階はふつう25歳から45歳の間に生じるが、もっと後に再び経験することがある。下位段階は、安定化、定着化、前進化である。安定化段階は、個人が一定期間その仕事にとどまることを期待して働き始めるときに生じる。仕事に落ち着き始め、自分が選んだ仕事で成功するための技能を持っているかどうかを見極める。定着化段階では、個人は自分の仕事により慣れ、安心感や安定感を持つようになる。前進化段階では、個人は高い業績を上げることや昇進することに焦点を当てる。",
     },
     "維持期": {
-        "title": "維持期",
-        "image": "iji.png",
+        "title": "あなたは維持期かも",
         "items": [
             "同じ分野（専門、職場、部門）の人々からの尊敬を保つこと",
             "仕事に関する新しい技術や方法について勉強会やセミナーに参加すること",
@@ -42,8 +39,7 @@ STAGES = {
         "feedback": "維持段階は、45歳から65歳の間に生じ、保持、更新、革新という下位段階を含む。保持段階では、個人は現在の仕事を維持することに関心を持つ傾向がある。更新段階では、個人は、自分の分野で有効に働くために必要な最新の職務技能を身につけるべく、継続教育、技能訓練ワークショップ、その他の機会を追求する。革新段階では、個人はキャリアに関連する課題を遂行するための、創造的な、あるいはより効果的な方法を探す。",
     },
     "解放期": {
-        "title": "解放期",
-        "image": "kaiho.png",
+        "title": "あなたは解放期かも",
         "items": [
             "自分の仕事をより容易に進める方法を開発すること",
             "退職に向けて十分に計画すること",
@@ -57,6 +53,14 @@ GENDER_CODE = {
     "男性": 0,
     "女性": 1,
     "その他": 2,
+}
+
+LIKERT_LABELS = {
+    1: "1　まったく関心がない",
+    2: "2　あまり関心がない",
+    3: "3　少しは関心がある",
+    4: "4　ある程度関心がある",
+    5: "5　大いに関心がある",
 }
 
 
@@ -131,188 +135,38 @@ def save_response(row: dict):
     return "CSV"
 
 
-def init_answer_state(items):
-    for q in items:
-        state_key = f"ans_{q['key']}"
-        if state_key not in st.session_state:
-            st.session_state[state_key] = None
-
-
-def set_answer(question_key: str, value: int):
-    st.session_state[f"ans_{question_key}"] = value
-
-
-def render_scale(question_key: str):
-    current = st.session_state.get(f"ans_{question_key}", None)
-
-    st.markdown(
-        """
-<div class="scale-wrap">
-  <div class="scale-top-row">
-    <div class="scale-label">まったく<br>関心がない</div>
-    <div></div>
-    <div></div>
-    <div></div>
-    <div class="scale-label">大いに<br>関心がある</div>
-  </div>
-
-  <div class="scale-number-row">
-    <div class="num-cell num-first"><span>1</span></div>
-    <div class="num-cell num-middle"><span>2</span></div>
-    <div class="num-cell num-middle"><span>3</span></div>
-    <div class="num-cell num-middle"><span>4</span></div>
-    <div class="num-cell num-last"><span>5</span></div>
-  </div>
-</div>
-""",
-        unsafe_allow_html=True,
-    )
-
-    cols = st.columns(5, gap="small")
-
-    for col, value in zip(cols, [1, 2, 3, 4, 5]):
-        mark = "☑" if current == value else "☐"
-        with col:
-            st.button(
-                mark,
-                key=f"scale_btn_{question_key}_{value}",
-                on_click=set_answer,
-                args=(question_key, value),
-                use_container_width=True,
-                type="secondary",
-            )
-
-    return st.session_state.get(f"ans_{question_key}", None)
-
-
 st.set_page_config(page_title=APP_TITLE, page_icon="🧭", layout="centered")
 
 st.markdown(
     """
 <style>
 .block-container {
-    max-width: 900px;
+    max-width: 850px;
+}
+
+.question-box {
+    margin-top: 28px;
+    padding-top: 12px;
+    border-top: 1px solid #eeeeee;
 }
 
 .question-text {
-    margin-top: 34px;
-    margin-bottom: 10px;
-    font-weight: 500;
+    font-weight: 600;
+    margin-bottom: 8px;
 }
 
-.scale-wrap {
-    width: 100%;
-    max-width: 760px;
-    margin-top: 4px;
-    margin-bottom: 0px;
+div[data-testid="stRadio"] {
+    margin-bottom: 8px;
 }
 
-.scale-top-row {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    width: 100%;
-    margin-bottom: 4px;
-}
-
-.scale-label {
-    text-align: center;
-    font-size: 0.88rem;
-    line-height: 1.25;
-    min-height: 2.5em;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
-.scale-number-row {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    width: 100%;
-    height: 32px;
-    align-items: center;
-}
-
-.num-cell {
-    position: relative;
-    text-align: center;
-    height: 32px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
-.num-cell span {
-    background: white;
-    z-index: 2;
-    padding: 0 6px;
-    font-size: 1rem;
-}
-
-.num-cell::after {
-    content: "";
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    border-top: 2px solid #666;
-    z-index: 1;
-}
-
-.num-first::after {
-    left: 50%;
-    right: -50%;
-}
-
-.num-middle::after {
-    left: -50%;
-    right: -50%;
-}
-
-.num-last::after {
-    left: -50%;
-    right: 50%;
-}
-
-/* 選択肢ボタン行 */
-div[data-testid="stHorizontalBlock"] {
-    max-width: 760px;
-}
-
-/* secondaryボタン＝尺度用の□/☑だけを整える */
-button[data-testid="stBaseButton-secondary"] {
-    background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-    padding: 0 !important;
-    min-height: 2.2rem !important;
-    height: 2.2rem !important;
-}
-
-button[data-testid="stBaseButton-secondary"]:hover {
-    background: rgba(0, 0, 0, 0.04) !important;
-    border: none !important;
-}
-
-button[data-testid="stBaseButton-secondary"] p {
-    font-size: 2.0rem !important;
-    line-height: 1 !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    text-align: center !important;
-}
-
-div[data-testid="stButton"] {
-    display: flex;
-    justify-content: center;
+div[data-testid="stRadio"] label {
+    padding-top: 2px;
+    padding-bottom: 2px;
 }
 
 .result-button-box {
-    margin-top: 28px;
+    margin-top: 30px;
     margin-bottom: 18px;
-}
-
-.result-image {
-    max-width: 460px;
-    margin: 0 auto 12px auto;
 }
 </style>
 """,
@@ -336,7 +190,7 @@ age = st.selectbox(
 )
 
 org_count = st.selectbox(
-    "今の勤務先は何社目（何組織目）ですか？就職経験がない場合は0、最初の就職先に継続勤務中なら1を選択",
+    "今の勤務先は何社目（何組織目）ですか？",
     options=list(range(0, 21)),
     index=None,
     placeholder="選択してください",
@@ -363,19 +217,29 @@ if "question_order" not in st.session_state:
     random.shuffle(order)
     st.session_state.question_order = order
 
-init_answer_state(all_items)
+answers = {}
 
 q_no = 1
 for idx in st.session_state.question_order:
     q = all_items[idx]
     key = q["key"]
 
+    st.markdown("<div class='question-box'>", unsafe_allow_html=True)
     st.markdown(
         f"<div class='question-text'>Q{q_no}. {q['item']}</div>",
         unsafe_allow_html=True,
     )
 
-    render_scale(key)
+    answers[key] = st.radio(
+        label="",
+        options=[1, 2, 3, 4, 5],
+        format_func=lambda x: LIKERT_LABELS[x],
+        index=None,
+        key=f"radio_{key}",
+        label_visibility="collapsed",
+    )
+
+    st.markdown("</div>", unsafe_allow_html=True)
     q_no += 1
 
 st.markdown("---")
@@ -384,10 +248,6 @@ submitted = st.button("結果を見る", type="primary", use_container_width=Tru
 st.markdown("</div>", unsafe_allow_html=True)
 
 if submitted:
-    answers = {}
-    for q in all_items:
-        answers[q["key"]] = st.session_state.get(f"ans_{q['key']}", None)
-
     missing_face = gender is None or age is None or org_count is None
     missing_main = any(v is None for v in answers.values())
 
@@ -433,11 +293,6 @@ if submitted:
             st.subheader("結果")
             for stage in top_stages:
                 st.markdown(f"### {STAGES[stage]['title']}")
-
-                image_file = STAGES[stage].get("image")
-                if image_file and Path(image_file).exists():
-                    st.image(image_file, width=420)
-
                 st.write(STAGES[stage]["feedback"])
 
         st.caption(f"保存先: {saved_to}")
