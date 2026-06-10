@@ -336,7 +336,7 @@ age = st.selectbox(
 )
 
 org_count = st.selectbox(
-    "今の勤務先は何社目（何組織目）ですか？",
+    "今の勤務先は何社目（何組織目）ですか？就職経験がない場合は0、最初の就職先に継続勤務中なら1を選択",
     options=list(range(0, 21)),
     index=None,
     placeholder="選択してください",
