@@ -11,11 +11,11 @@ APP_TITLE = "キャリアのステージはどこだ？"
 OUTPUT_CSV = Path("responses.csv")
 
 LIKERT = [
-    (1, "1\n全く関心がない"),
-    (2, "2\nあまり関心がない"),
-    (3, "3\n少しは関心がある"),
-    (4, "4\nある程度関心がある"),
-    (5, "5\n大いに関心がある"),
+    (1, "全く関心がない"),
+    (2, "あまり関心がない"),
+    (3, "少しは関心がある"),
+    (4, "ある程度関心がある"),
+    (5, "大いに関心がある"),
 ]
 
 STAGES = {
@@ -136,55 +136,94 @@ def save_response(row: dict):
     return "CSV"
 
 
+
+
+def render_likert_ruler():
+    labels_html = "".join(f"<div>{label}</div>" for _, label in LIKERT)
+    ticks_html = "".join("<div class='likert-tick'></div>" for _ in LIKERT)
+    numbers_html = "".join(f"<div>{value}</div>" for value, _ in LIKERT)
+    st.markdown(
+        f"""
+<div class="likert-ruler">
+  <div class="likert-labels">{labels_html}</div>
+  <div class="likert-line">{ticks_html}</div>
+  <div class="likert-numbers">{numbers_html}</div>
+</div>
+""",
+        unsafe_allow_html=True,
+    )
+
 st.set_page_config(page_title=APP_TITLE, page_icon="🧭", layout="centered")
 st.title(APP_TITLE)
 
 st.markdown(
     """
 <style>
-/* 横軸のリカート尺度っぽく見せるための調整 */
+/* 定規型リカート尺度 */
+.likert-ruler {
+  max-width: 760px;
+  margin: 8px 0 0 0;
+}
+.likert-labels, .likert-numbers {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  text-align: center;
+  align-items: end;
+}
+.likert-labels div {
+  font-size: 0.88rem;
+  line-height: 1.22;
+  min-height: 2.45em;
+  padding: 0 4px;
+}
+.likert-line {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  align-items: center;
+  margin-top: 4px;
+  height: 22px;
+  position: relative;
+}
+.likert-line::before {
+  content: "";
+  position: absolute;
+  left: 10%;
+  right: 10%;
+  top: 10px;
+  border-top: 2px solid #666;
+}
+.likert-tick {
+  justify-self: center;
+  width: 0;
+  height: 22px;
+  border-left: 2px solid #666;
+  z-index: 1;
+}
+.likert-numbers div {
+  font-size: 0.94rem;
+  line-height: 1;
+  margin-top: 0;
+}
+/* st.radioは下段のチェック欄として使う */
 div[data-testid="stRadio"] div[role="radiogroup"] {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  position: relative;
-  padding-top: 18px;
-  margin-top: 4px;
-  margin-bottom: 26px;
   max-width: 760px;
-}
-div[data-testid="stRadio"] div[role="radiogroup"]::before {
-  content: "";
-  position: absolute;
-  top: 29px;
-  left: 8%;
-  right: 8%;
-  border-top: 2px solid #666;
+  margin-top: -8px;
+  margin-bottom: 28px;
 }
 div[data-testid="stRadio"] div[role="radiogroup"] label {
   flex: 1 1 0;
   display: flex;
   justify-content: center;
-  text-align: center;
-  position: relative;
-  z-index: 1;
-  padding-top: 18px;
-}
-div[data-testid="stRadio"] div[role="radiogroup"] label::before {
-  content: "";
-  position: absolute;
-  top: 2px;
-  height: 24px;
-  border-left: 2px solid #666;
-}
-div[data-testid="stRadio"] div[role="radiogroup"] label > div:first-child {
-  background: white;
-  border-radius: 50%;
+  padding: 0;
 }
 div[data-testid="stRadio"] div[role="radiogroup"] p {
-  white-space: pre-line;
-  font-size: 0.86rem;
-  line-height: 1.22;
+  display: none;
+}
+.question-text {
+  margin-top: 20px;
+  margin-bottom: 2px;
 }
 </style>
 """,
@@ -225,13 +264,16 @@ with st.form("career_stage_form"):
     for idx in st.session_state.question_order:
         q = all_items[idx]
         key = f"{q['stage']}_{q['i']}"
+        st.markdown(f"<div class='question-text'>Q{q_no}. {q['item']}</div>", unsafe_allow_html=True)
+        render_likert_ruler()
         ans = st.radio(
-            f"Q{q_no}. {q['item']}",
+            f"Q{q_no}. {q['item']} 回答",
             options=[x[0] for x in LIKERT],
-            format_func=lambda x: dict(LIKERT)[x],
+            format_func=lambda x: "",
             horizontal=True,
             index=None,
             key=key,
+            label_visibility="collapsed",
         )
         answers[key] = ans
         q_no += 1
