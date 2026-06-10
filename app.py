@@ -164,23 +164,19 @@ def render_scale(question_key: str):
         unsafe_allow_html=True,
     )
 
-    st.markdown('<div class="scale-button-area">', unsafe_allow_html=True)
-
     cols = st.columns(5, gap="small")
 
     for col, value in zip(cols, [1, 2, 3, 4, 5]):
-        mark = "☑" if current == value else "□"
+        mark = "☑" if current == value else "☐"
         with col:
             st.button(
                 mark,
-                key=f"btn_{question_key}_{value}",
+                key=f"scale_btn_{question_key}_{value}",
                 on_click=set_answer,
                 args=(question_key, value),
                 use_container_width=True,
                 type="secondary",
             )
-
-    st.markdown("</div>", unsafe_allow_html=True)
 
     return st.session_state.get(f"ans_{question_key}", None)
 
@@ -272,30 +268,39 @@ st.markdown(
     right: 50%;
 }
 
-/* 尺度ボタン行だけを少し整える。結果ボタンには強いCSSをかけない */
-.scale-button-area + div[data-testid="stHorizontalBlock"] {
+/* 選択肢ボタン行 */
+div[data-testid="stHorizontalBlock"] {
     max-width: 760px;
-    margin-bottom: 28px;
 }
 
-.scale-button-area + div[data-testid="stHorizontalBlock"] div[data-testid="stButton"] {
+/* secondaryボタン＝尺度用の□/☑だけを整える */
+button[data-testid="stBaseButton-secondary"] {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    min-height: 2.2rem !important;
+    height: 2.2rem !important;
+}
+
+button[data-testid="stBaseButton-secondary"]:hover {
+    background: rgba(0, 0, 0, 0.04) !important;
+    border: none !important;
+}
+
+button[data-testid="stBaseButton-secondary"] p {
+    font-size: 2.0rem !important;
+    line-height: 1 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    text-align: center !important;
+}
+
+div[data-testid="stButton"] {
     display: flex;
     justify-content: center;
 }
 
-.scale-button-area + div[data-testid="stHorizontalBlock"] div[data-testid="stButton"] button {
-    font-size: 1.7rem;
-    line-height: 1;
-    min-height: 2.6rem;
-    padding: 0.15rem 0.3rem;
-}
-
-.scale-button-area + div[data-testid="stHorizontalBlock"] div[data-testid="stButton"] button p {
-    font-size: 1.7rem;
-    line-height: 1;
-}
-
-/* 結果ボタン周辺 */
 .result-button-box {
     margin-top: 28px;
     margin-bottom: 18px;
