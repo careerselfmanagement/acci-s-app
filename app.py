@@ -7,7 +7,7 @@ from zoneinfo import ZoneInfo
 
 import streamlit as st
 
-APP_TITLE = "キャリアステージ確認"
+APP_TITLE = "キャリアのステージはどこだ？"
 OUTPUT_CSV = Path("responses.csv")
 
 STAGES = {
@@ -49,10 +49,10 @@ STAGES = {
     },
 }
 
-GENDER_OPTIONS = {
-    0: "男性",
-    1: "女性",
-    2: "その他",
+GENDER_CODE = {
+    "男性": 0,
+    "女性": 1,
+    "その他": 2,
 }
 
 
@@ -164,6 +164,8 @@ def render_scale(question_key: str):
         unsafe_allow_html=True,
     )
 
+    st.markdown('<div class="scale-button-area">', unsafe_allow_html=True)
+
     cols = st.columns(5, gap="small")
 
     for col, value in zip(cols, [1, 2, 3, 4, 5]):
@@ -175,7 +177,10 @@ def render_scale(question_key: str):
                 on_click=set_answer,
                 args=(question_key, value),
                 use_container_width=True,
+                type="secondary",
             )
+
+    st.markdown("</div>", unsafe_allow_html=True)
 
     return st.session_state.get(f"ans_{question_key}", None)
 
@@ -267,38 +272,33 @@ st.markdown(
     right: 50%;
 }
 
-div[data-testid="stHorizontalBlock"] {
+/* 尺度ボタン行だけを少し整える。結果ボタンには強いCSSをかけない */
+.scale-button-area + div[data-testid="stHorizontalBlock"] {
     max-width: 760px;
+    margin-bottom: 28px;
 }
 
-div[data-testid="stButton"] {
+.scale-button-area + div[data-testid="stHorizontalBlock"] div[data-testid="stButton"] {
     display: flex;
     justify-content: center;
 }
 
-div[data-testid="stButton"] button {
-    font-size: 1.9rem;
+.scale-button-area + div[data-testid="stHorizontalBlock"] div[data-testid="stButton"] button {
+    font-size: 1.7rem;
     line-height: 1;
-    padding: 0.05rem 0.3rem;
-    min-height: 2.5rem;
-    border: none;
-    background: transparent;
-    box-shadow: none;
+    min-height: 2.6rem;
+    padding: 0.15rem 0.3rem;
 }
 
-div[data-testid="stButton"] button:hover {
-    border: none;
-    background: rgba(0, 0, 0, 0.04);
-}
-
-div[data-testid="stButton"] button:focus {
-    outline: none;
-    box-shadow: none;
-}
-
-div[data-testid="stButton"] button p {
-    font-size: 1.9rem;
+.scale-button-area + div[data-testid="stHorizontalBlock"] div[data-testid="stButton"] button p {
+    font-size: 1.7rem;
     line-height: 1;
+}
+
+/* 結果ボタン周辺 */
+.result-button-box {
+    margin-top: 28px;
+    margin-bottom: 18px;
 }
 </style>
 """,
@@ -309,8 +309,7 @@ st.title(APP_TITLE)
 
 gender = st.selectbox(
     "性別を教えてください",
-    options=list(GENDER_OPTIONS.keys()),
-    format_func=lambda x: f"{x}={GENDER_OPTIONS[x]}",
+    options=["男性", "女性", "その他"],
     index=None,
     placeholder="選択してください",
 )
@@ -365,7 +364,10 @@ for idx in st.session_state.question_order:
     render_scale(key)
     q_no += 1
 
-submitted = st.button("結果を見る", type="primary")
+st.markdown("---")
+st.markdown('<div class="result-button-box">', unsafe_allow_html=True)
+submitted = st.button("結果を見る", type="primary", use_container_width=True)
+st.markdown("</div>", unsafe_allow_html=True)
 
 if submitted:
     answers = {}
@@ -394,8 +396,8 @@ if submitted:
 
         row = {
             "回答日時": now,
-            "性別コード": gender,
-            "性別": GENDER_OPTIONS[gender],
+            "性別コード": GENDER_CODE[gender],
+            "性別": gender,
             "年齢": age,
             "勤務先_何社目_何組織目": org_count,
             **flat_answers,
