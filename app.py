@@ -11,11 +11,11 @@ APP_TITLE = "キャリアのステージはどこだ？"
 OUTPUT_CSV = Path("responses.csv")
 
 LIKERT = [
-    (1, "1 全く関心がない"),
-    (2, "2 あまり関心がない"),
-    (3, "3 少しは関心がある"),
-    (4, "4 ある程度関心がある"),
-    (5, "5 大いに関心がある"),
+    (1, "1\n全く関心がない"),
+    (2, "2\nあまり関心がない"),
+    (3, "3\n少しは関心がある"),
+    (4, "4\nある程度関心がある"),
+    (5, "5\n大いに関心がある"),
 ]
 
 STAGES = {
@@ -138,6 +138,58 @@ def save_response(row: dict):
 
 st.set_page_config(page_title=APP_TITLE, page_icon="🧭", layout="centered")
 st.title(APP_TITLE)
+
+st.markdown(
+    """
+<style>
+/* 横軸のリカート尺度っぽく見せるための調整 */
+div[data-testid="stRadio"] div[role="radiogroup"] {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  position: relative;
+  padding-top: 18px;
+  margin-top: 4px;
+  margin-bottom: 26px;
+  max-width: 760px;
+}
+div[data-testid="stRadio"] div[role="radiogroup"]::before {
+  content: "";
+  position: absolute;
+  top: 29px;
+  left: 8%;
+  right: 8%;
+  border-top: 2px solid #666;
+}
+div[data-testid="stRadio"] div[role="radiogroup"] label {
+  flex: 1 1 0;
+  display: flex;
+  justify-content: center;
+  text-align: center;
+  position: relative;
+  z-index: 1;
+  padding-top: 18px;
+}
+div[data-testid="stRadio"] div[role="radiogroup"] label::before {
+  content: "";
+  position: absolute;
+  top: 2px;
+  height: 24px;
+  border-left: 2px solid #666;
+}
+div[data-testid="stRadio"] div[role="radiogroup"] label > div:first-child {
+  background: white;
+  border-radius: 50%;
+}
+div[data-testid="stRadio"] div[role="radiogroup"] p {
+  white-space: pre-line;
+  font-size: 0.86rem;
+  line-height: 1.22;
+}
+</style>
+""",
+    unsafe_allow_html=True,
+)
 with st.form("career_stage_form"):
     gender = st.selectbox(
         "性別を教えてください",
