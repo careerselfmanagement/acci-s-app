@@ -11,20 +11,12 @@ APP_TITLE = "キャリアのステージはどこだ？"
 OUTPUT_CSV = Path("responses.csv")
 
 LIKERT = [
-    (1, "全く関心がない"),
-    (2, "あまり関心がない"),
-    (3, "少しは関心がある"),
-    (4, "ある程度関心がある"),
-    (5, "大いに関心がある"),
+    (1, "全く関心が<br>ない"),
+    (2, "あまり関心が<br>ない"),
+    (3, "少しは関心が<br>ある"),
+    (4, "ある程度関心が<br>ある"),
+    (5, "大いに関心が<br>ある"),
 ]
-
-LIKERT_LABEL_HTML = {
-    1: "全く関心が<br>ない",
-    2: "あまり関心が<br>ない",
-    3: "少しは関心が<br>ある",
-    4: "ある程度関心が<br>ある",
-    5: "大いに関心が<br>ある",
-}
 
 STAGES = {
     "探索期": {
@@ -82,6 +74,7 @@ def stage_scores(answers: dict[str, int]) -> dict[str, float]:
 
 def judge(answers: dict[str, int]):
     values = list(answers.values())
+
     if len(set(values)) == 1:
         return "判定不能", [], {}
 
@@ -93,6 +86,7 @@ def judge(answers: dict[str, int]):
 
 def append_local_csv(row: dict):
     file_exists = OUTPUT_CSV.exists()
+
     with OUTPUT_CSV.open("a", newline="", encoding="utf-8-sig") as f:
         writer = csv.DictWriter(f, fieldnames=list(row.keys()))
         if not file_exists:
@@ -141,56 +135,72 @@ def save_response(row: dict):
     return "CSV"
 
 
-def render_likert_ruler():
-    labels_html = "".join(
-        f"<div class='likert-label'>{LIKERT_LABEL_HTML[value]}</div>"
-        for value, _ in LIKERT
-    )
+def render_scale(question_key: str):
+    selected_values = []
 
-    ticks_html = "".join(
-        "<div class='likert-tick-wrap'><div class='likert-tick'></div></div>"
-        for _ in LIKERT
-    )
+    # 1行目：選択肢文言
+    label_cols = st.columns(5, gap="small")
+    for col, (_, label_html) in zip(label_cols, LIKERT):
+        with col:
+            st.markdown(
+                f"""
+                <div class="scale-label">
+                    {label_html}
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
 
-    numbers_html = "".join(
-        f"<div class='likert-number'>{value}</div>"
-        for value, _ in LIKERT
-    )
+    # 2行目：定規線と垂直線
+    tick_cols = st.columns(5, gap="small")
+    for i, col in enumerate(tick_cols):
+        with col:
+            if i == 0:
+                line_class = "line-first"
+            elif i == 4:
+                line_class = "line-last"
+            else:
+                line_class = "line-middle"
 
-    st.markdown(
-        f"""
-<div class="likert-box">
-  <div class="likert-label-row">
-    {labels_html}
-  </div>
-  <div class="likert-line-row">
-    <div class="likert-horizontal-line"></div>
-    {ticks_html}
-  </div>
-  <div class="likert-number-row">
-    {numbers_html}
-  </div>
-</div>
-""",
-        unsafe_allow_html=True,
-    )
+            st.markdown(
+                f"""
+                <div class="tick-cell {line_class}">
+                    <div class="tick-line"></div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
 
+    # 3行目：数字
+    number_cols = st.columns(5, gap="small")
+    for col, (value, _) in zip(number_cols, LIKERT):
+        with col:
+            st.markdown(
+                f"""
+                <div class="scale-number">
+                    {value}
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
 
-def render_radio_row(question_key: str):
-    st.markdown("<div class='radio-aligner'>", unsafe_allow_html=True)
+    # 4行目：チェックボックス
+    check_cols = st.columns(5, gap="small")
+    for col, (value, _) in zip(check_cols, LIKERT):
+        with col:
+            checked = st.checkbox(
+                " ",
+                key=f"{question_key}_{value}",
+                label_visibility="collapsed",
+            )
+            if checked:
+                selected_values.append(value)
 
-    value = st.radio(
-        label=f"{question_key}_回答",
-        options=[1, 2, 3, 4, 5],
-        format_func=lambda x: "",
-        horizontal=True,
-        index=None,
-        key=question_key,
-        label_visibility="collapsed",
-    )
-
-    st.markdown("</div>", unsafe_allow_html=True)
-    return value
+    if len(selected_values) == 0:
+        return None
+    if len(selected_values) == 1:
+        return selected_values[0]
+    return "multiple"
 
 
 st.set_page_config(page_title=APP_TITLE, page_icon="🧭", layout="centered")
@@ -199,117 +209,111 @@ st.markdown(
     """
 <style>
 .block-container {
-  max-width: 900px;
+    max-width: 900px;
 }
 
-.likert-box {
-  width: 760px;
-  max-width: 100%;
-  margin-top: 8px;
-  margin-bottom: 0px;
-}
-
-.likert-label-row {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  width: 100%;
-  margin-bottom: 4px;
-}
-
-.likert-label {
-  text-align: center;
-  font-size: 0.86rem;
-  line-height: 1.25;
-  min-height: 2.7em;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  white-space: normal;
-}
-
-.likert-line-row {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  width: 100%;
-  height: 24px;
-  position: relative;
-  align-items: center;
-}
-
-.likert-horizontal-line {
-  position: absolute;
-  left: 10%;
-  right: 10%;
-  top: 11px;
-  border-top: 2px solid #666;
-  z-index: 0;
-}
-
-.likert-tick-wrap {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 24px;
-  z-index: 1;
-}
-
-.likert-tick {
-  height: 24px;
-  border-left: 2px solid #666;
-}
-
-.likert-number-row {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  width: 100%;
-  margin-top: 0px;
-}
-
-.likert-number {
-  text-align: center;
-  font-size: 0.95rem;
-  line-height: 1.1;
-}
-
+/* 質問文 */
 .question-text {
-  margin-top: 28px;
-  margin-bottom: 4px;
-  font-weight: 500;
+    margin-top: 32px;
+    margin-bottom: 8px;
+    font-weight: 500;
 }
 
-/* ここが今回の肝。ラジオボタンの幅を定規と同じ760pxに固定 */
-.radio-aligner + div[data-testid="stRadio"] {
-  width: 760px !important;
-  max-width: 100% !important;
+/* 選択肢文言 */
+.scale-label {
+    text-align: center;
+    font-size: 0.86rem;
+    line-height: 1.25;
+    min-height: 2.7em;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
-.radio-aligner + div[data-testid="stRadio"] div[role="radiogroup"] {
-  display: grid !important;
-  grid-template-columns: repeat(5, 1fr) !important;
-  width: 760px !important;
-  max-width: 100% !important;
-  column-gap: 0 !important;
-  margin-top: -4px !important;
-  margin-bottom: 32px !important;
+/* 定規線のセル */
+.tick-cell {
+    position: relative;
+    height: 26px;
 }
 
-.radio-aligner + div[data-testid="stRadio"] div[role="radiogroup"] label {
-  width: 100% !important;
-  min-width: 0 !important;
-  display: flex !important;
-  justify-content: center !important;
-  align-items: center !important;
-  padding: 0 !important;
-  margin: 0 !important;
+/* 横線 */
+.tick-cell::before {
+    content: "";
+    position: absolute;
+    top: 13px;
+    border-top: 2px solid #666;
 }
 
-.radio-aligner + div[data-testid="stRadio"] div[role="radiogroup"] label > div:first-child {
-  margin-right: 0 !important;
+/* 1の列は中央から右だけ */
+.line-first::before {
+    left: 50%;
+    right: -10%;
 }
 
-.radio-aligner + div[data-testid="stRadio"] div[role="radiogroup"] p {
-  display: none !important;
+/* 2,3,4の列は左右に伸ばす */
+.line-middle::before {
+    left: -10%;
+    right: -10%;
+}
+
+/* 5の列は左から中央だけ */
+.line-last::before {
+    left: -10%;
+    right: 50%;
+}
+
+/* 垂直線 */
+.tick-line {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    top: 1px;
+    height: 24px;
+    border-left: 2px solid #666;
+    z-index: 1;
+}
+
+/* 数字 */
+.scale-number {
+    text-align: center;
+    font-size: 0.95rem;
+    line-height: 1.1;
+    margin-top: -4px;
+    margin-bottom: 0px;
+}
+
+/* チェックボックスを各列の中央へ */
+div[data-testid="stCheckbox"] {
+    display: flex;
+    justify-content: center;
+}
+
+div[data-testid="stCheckbox"] label {
+    width: 100% !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+div[data-testid="stCheckbox"] label > div:first-child {
+    margin-right: 0 !important;
+}
+
+div[data-testid="stCheckbox"] p {
+    display: none !important;
+}
+
+/* Streamlitの列間の余白を少し整える */
+div[data-testid="column"] {
+    display: flex;
+    justify-content: center;
+}
+
+/* チェック行の下に余白 */
+div[data-testid="stCheckbox"] {
+    margin-bottom: 24px;
 }
 </style>
 """,
@@ -362,6 +366,7 @@ if "question_order" not in st.session_state:
     st.session_state.question_order = order
 
 answers = {}
+multiple_error_questions = []
 
 q_no = 1
 for idx in st.session_state.question_order:
@@ -373,9 +378,13 @@ for idx in st.session_state.question_order:
         unsafe_allow_html=True,
     )
 
-    render_likert_ruler()
-    value = render_radio_row(key)
-    answers[key] = value
+    value = render_scale(key)
+
+    if value == "multiple":
+        multiple_error_questions.append(q_no)
+        answers[key] = None
+    else:
+        answers[key] = value
 
     q_no += 1
 
@@ -385,7 +394,11 @@ if submitted:
     missing_face = gender is None or age is None or org_count is None
     missing_main = any(v is None for v in answers.values())
 
-    if missing_face or missing_main:
+    if multiple_error_questions:
+        qs = "、".join([f"Q{x}" for x in multiple_error_questions])
+        st.error(f"{qs}で複数の選択肢が選ばれています。各項目につき1つだけ選択してください。")
+
+    elif missing_face or missing_main:
         st.error("未回答の項目があります。すべて回答してください。")
 
     else:
