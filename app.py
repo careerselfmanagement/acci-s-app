@@ -1,5 +1,6 @@
 import csv
 import json
+import random
 from pathlib import Path
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -137,10 +138,7 @@ def save_response(row: dict):
 
 st.set_page_config(page_title=APP_TITLE, page_icon="🧭", layout="centered")
 st.title(APP_TITLE)
-st.write("以下12の課題について、あなたが現在どの程度の関心を持っているかを数字で選択してください。")
-
 with st.form("career_stage_form"):
-    st.subheader("フェイス項目")
     gender = st.selectbox(
         "性別を教えてください",
         options=list(GENDER_OPTIONS.keys()),
@@ -157,23 +155,34 @@ with st.form("career_stage_form"):
         help="就職経験がない場合は0、最初の就職先に継続勤務中なら1を選択してください。",
     )
 
-    st.subheader("メイン項目")
+    st.markdown("---")
+    st.write("以下12の課題について、あなたが現在どの程度の関心を持っているかを数字で選択してください。")
+
     answers = {}
-    q_no = 1
+    all_items = []
     for stage, data in STAGES.items():
-        st.markdown(f"**{stage}**")
         for i, item in enumerate(data["items"]):
-            key = f"{stage}_{i}"
-            ans = st.radio(
-                f"Q{q_no}. {item}",
-                options=[x[0] for x in LIKERT],
-                format_func=lambda x: dict(LIKERT)[x],
-                horizontal=False,
-                index=None,
-                key=key,
-            )
-            answers[key] = ans
-            q_no += 1
+            all_items.append({"stage": stage, "i": i, "item": item})
+
+    if "question_order" not in st.session_state:
+        order = list(range(len(all_items)))
+        random.shuffle(order)
+        st.session_state.question_order = order
+
+    q_no = 1
+    for idx in st.session_state.question_order:
+        q = all_items[idx]
+        key = f"{q['stage']}_{q['i']}"
+        ans = st.radio(
+            f"Q{q_no}. {q['item']}",
+            options=[x[0] for x in LIKERT],
+            format_func=lambda x: dict(LIKERT)[x],
+            horizontal=True,
+            index=None,
+            key=key,
+        )
+        answers[key] = ans
+        q_no += 1
 
     submitted = st.form_submit_button("結果を見る")
 
